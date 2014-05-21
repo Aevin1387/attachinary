@@ -8,13 +8,21 @@ module Attachinary
     end
 
     def self.process_hash(hash, scope=nil)
+
       if hash['id']
-        Attachinary::File.find hash['id']
+        file = Attachinary::File.find hash['id']
+        if Rails::VERSION::MAJOR == 3
+          params = file.update(hash.slice(*Attachinary::File.attr_accessible[:default].to_a))
+        else
+          params = ActionController::Parameters.new(hash).permit(Attachinary.permitted_fields)
+        end
+        file.update(params)
+        file
       else
         file = if Rails::VERSION::MAJOR == 3
           Attachinary::File.new hash.slice(*Attachinary::File.attr_accessible[:default].to_a)
         else
-          permitted_params = ActionController::Parameters.new(hash).permit(:public_id, :version, :width, :height, :format, :resource_type)
+          permitted_params = ActionController::Parameters.new(hash).permit(Attachinary.permitted_fields)
           Attachinary::File.new(permitted_params)
         end
         file.scope = scope.to_s if scope && file.respond_to?(:scope=)

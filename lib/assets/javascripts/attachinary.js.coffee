@@ -6,6 +6,7 @@
       disableWith: 'Uploading...'
       indicateProgress: true
       invalidFormatMessage: 'Invalid file format'
+      extra_fields: []
       template: """
         <ul>
           <% for(var i=0; i<files.length; i++){ %>
@@ -14,8 +15,13 @@
                 <div class="raw-file"></div>
               <% } else { %>
                 <img
-                  src="<%= $.cloudinary.url(files[i].public_id, { "version": files[i].version, "format": 'jpg', "crop": 'fill', "width": 75, "height": 75 }) %>"
+                  src="<%= $.cloudinary.url(files[i].public_id, files[i].as_form_json) %>"
                   alt="" width="75" height="75" />
+              <% } %>
+              <% for(var f=0; f < extra_fields.length; f++) { %>
+                <% var field = extra_fields[f]; %>
+                <label for="<%= field.name %>"><%= field.label %></label>
+                <input type="text" class="extra_field <%= field.name %>" name="<%= field.name %>" value="<%= files[i][field.name] %>"> </input>
               <% } %>
               <a href="#" data-remove="<%= files[i].public_id %>">Remove</a>
             </li>
@@ -23,7 +29,7 @@
         </ul>
       """
       render: (files) ->
-        $.attachinary.Templating.template(@template, files: files)
+        $.attachinary.Templating.template(@template, { files: files, extra_fields: @extra_fields })
 
 
   $.fn.attachinary = (options) ->
@@ -164,6 +170,14 @@
         @$filesContainer.find('[data-remove]').on 'click', (event) =>
           event.preventDefault()
           @removeFile $(event.target).data('remove')
+        @$filesContainer.find('input.extra_field').on 'change', (event) =>
+          files = @files
+          image_id = $(event.target).parent().find('[data-remove]').attr('data-remove')
+          changed_files = $.grep @files, (file) =>
+            file.public_id == image_id
+          changed_file = changed_files[0]
+          changed_file[event.target.name] = event.target.value
+          @redraw()
 
         @$filesContainer.show()
       else

@@ -3,14 +3,29 @@ module Attachinary
     def self.included(base)
       base.validates :public_id, :version, :resource_type, presence: true
       if Rails::VERSION::MAJOR == 3
-        base.attr_accessible :public_id, :version, :width, :height, :format, :resource_type
+        base.attr_accessible *Attachinary.permitted_fields
       end
       base.after_destroy :destroy_file
       base.after_create  :remove_temporary_tag
     end
 
     def as_json(options)
-      super(only: [:id, :public_id, :format, :version, :resource_type], methods: [:path])
+      super(only: [:id, :public_id, :format, :version, :resource_type] + Attachinary.extra_fields, methods: [:path])
+    end
+
+    def as_form_json
+      data = {
+        public_id: public_id,
+        version: version,
+        format: "jpeg",
+        crop: 'fill',
+        width: 75,
+        height: 75
+      }
+      Attachinary.extra_fields.each do |field|
+        data[field] = self.send(field)
+      end
+      data.as_json
     end
 
     def path(custom_format=nil)
